@@ -8,14 +8,20 @@ import jwt from "jsonwebtoken";
 
 // user schema
 const userSchema = new Schema({
-    name: { type: String },
+    fullName: { type: String },
     email: { type: String, lowercase: true },
     password: { type: String, select: false },
-    role: { type: String, enum: Object.values(ROLES), default: "user" },
-    profileImage: { type: String },
+    rollNumber:{type:Number},
+    role: { type: String, enum: Object.values(ROLES), default: "student" },
+    profileImage: { type: String},
+    Teaches:{type:String},
     isDeleted: { type: Boolean, default: false},
     otp:{type: Number},
     otpExpiry:{type:Date},
+    school:{type:String},
+    class: { type: [String] },
+    courses: [{type: Schema.Types.ObjectId,ref: "course"}
+    ]
 }, { timestamps: true, versionKey: false });
 
 // hash password before saving
@@ -68,4 +74,3 @@ export const getAllUsers = async ({ query, page, limit }) => {
     return { data, pagination };
 };
 
-export const deleteUserById = (id) => UserModel.findByIdAndDelete(id)

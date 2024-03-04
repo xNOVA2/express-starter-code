@@ -1,7 +1,7 @@
 export const ROLES = Object.freeze({
   ADMIN: 'admin',
-  USER: 'user', // request initiator
-  BUSINESS: 'business',
+  STUDENT: 'student', // request initiator
+  TEACHER: 'teacher',
 });
 
 export const STATUS_CODES = Object.freeze({

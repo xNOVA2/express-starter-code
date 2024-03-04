@@ -1,26 +1,41 @@
 import { generateResponse, asyncHandler, generateRandomOTP } from '../utils/helpers.js';
 import { createUser, findUser } from '../models/index.js';
 import { STATUS_CODES } from '../utils/constants.js';
+import uploadOnCloudinary from '../utils/cloudinary.js';
 // register user
 export const register = asyncHandler(async (req, res, next) => {
+
+   
+  if (!req.files?.profileImage || req.files?.profileImage.length === 0)
+  return next({
+    statusCode: STATUS_CODES.UNPROCESSABLE_ENTITY,
+    message: "Image is required",
+  });
+
+    let imageURL = await uploadOnCloudinary(req.files?.profileImage[0].path);
+
+    req.body.profileImage = imageURL.secure_url;
     // create user in db
     let user = await createUser(req.body);
     // remove password
     user = user.toObject();
     delete user.password;
 
-    generateResponse( user , "Register successful", res);
+    generateResponse(user, "Register successful", res);
 });
 
 // login user
 export const login = asyncHandler(async (req, res, next) => {
+
     let user = await findUser({ email: req.body.email }).select('+password');
+
     if (!user) return next({
         statusCode: STATUS_CODES.BAD_REQUEST,
         message: 'Invalid email or password'
     });
 
     const isMatch = await user.isPasswordCorrect(req.body.password);
+
     if (!isMatch) return next({
         statusCode: STATUS_CODES.UNAUTHORIZED,
         message: 'Invalid password'
@@ -37,22 +52,21 @@ export const login = asyncHandler(async (req, res, next) => {
 });
 
 export const otpGenerate = asyncHandler(async (req, res, next) => {
-    // create user in db
+    
   let {email} = req.body;
+ 
+  const user = await findUser({ email });
+
+  if(!user) return next({
+    statusCode: STATUS_CODES.BAD_REQUEST,
+    message: 'user doest exist'
+});
 
   const otp = generateRandomOTP()
  
-    // remove password
     const otpExpiry = new Date();
     
     otpExpiry.setMinutes(otpExpiry.getMinutes() + parseInt(process.env.OTP_EXPIRATION));
-
-    const user = await findUser({ email });
-
-    if(!user) return next({
-        statusCode: STATUS_CODES.BAD_REQUEST,
-        message: 'Invalid email'
-    });
 
     user.otp = otp;
     user.otpExpiry = otpExpiry;
@@ -66,17 +80,21 @@ export const otpVerify = asyncHandler(async (req, res, next) => {
     // create user in db
   let {email, otp} = req.body;
 
-    const user = await findUser({ email,otp });
+    const user = await findUser({ email });
 
     if(!user) return next({
         statusCode: STATUS_CODES.BAD_REQUEST,
-        message: 'Invalid email'
+        message: 'user doest exist'
     });
 
-    // if(user.otp !== otp) return next({
-    //     statusCode: STATUS_CODES.BAD_REQUEST,
-    //     message: 'Invalid OTP'
-    // });
+    console.log(user.otp)
+    console.log(">>>>>")
+    console.log(otp)
+    if(parseInt(user.otp) !== parseInt(otp)) return next({
+        statusCode: STATUS_CODES.BAD_REQUEST,
+        message: 'Invalid OTP'
+    });
+
 
     if(user.otpExpiry < new Date()) return next({
         statusCode: STATUS_CODES.BAD_REQUEST,
@@ -114,3 +132,20 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
     generateResponse( null , "Password reset sucessfully", res);
 }
 )
+
+export const logout = asyncHandler(async (req, res, next) => {
+    req.session = null;
+    generateResponse( null , "Logout sucessfully", res);
+})
+
+export const getCurrentUser = asyncHandler(async(req,res,next) => {
+
+    const user = await findUser({ _id:req.user.id, });
+
+    if(!user) return next({
+        statusCode: STATUS_CODES.BAD_REQUEST,
+        message: 'Invalid email'
+    });
+
+    generateResponse( user , "User found sucessfully", res);
+})

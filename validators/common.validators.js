@@ -19,11 +19,12 @@ export const objectId = Joi.extend((joi) => ({
 }));
 
 // Validate email
-export const emailExistsValidator = asyncHandler(async (req, res, next) => {
-    const user = await findUser({ email: req.body.email });
+export const rollNumberAndemailExistsValidator = asyncHandler(async (req, res, next) => {
+    const user = await findUser({$or: [{ email: req.body.email },{ rollNumber: req.body.rollNumber }]});
+
     if (user) return next({
         statusCode: STATUS_CODES.CONFLICT,
-        message: "Email already exists!"
+        message: "Email or Roll Number already exists!"
     });
     next();
 });
